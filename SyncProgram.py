@@ -3,6 +3,11 @@ import sys
 from threading import Thread
 from time import sleep
 from typing import Any
+import os
+import filecmp
+import shutil
+from pathlib import Path
+
 
 class Syncher:
 
@@ -11,7 +16,7 @@ class Syncher:
     source_path = "."
     replica_path = ""
     logs_path = ""
-    sync_interval = 60
+    sync_interval = "10"
 
     def __init__(self, **kwargs):
         # Update the attributes of object Syncher.
@@ -31,6 +36,8 @@ class Syncher:
 
         updater = Updater(self.source_path, self.replica_path, self.logs_path, self.sync_interval)
         updater.start()
+
+        sleep(1)
 
         while True:
             response = input("Type \"help\" to see available commands.\n")
@@ -69,21 +76,32 @@ class Updater(Thread):
             sleep(self.sync_interval)
 
     def sync_files(self) -> None: # TODO
-        print("...SYNCHING...")
-        print("DONE!")
-
-
         
-
-
-
-
+        for root, dirs, files in os.walk(self.source_path):
+            for file in files:
+                source_file = os.path.join(root, file)
+                replica_file = os.path.join(root.replace(self.source_path, self.replica_path), file)
                 
 
+                # If source_file is not in replica/file is different from replica's, copy-paste it.
+                if not os.path.exists(replica_file) or not filecmp.cmp(source_file, replica_file, shallow=False): # TODO
+                    shutil.copyfile(source_file, replica_file)
 
+                
+                # If file is different from replica's, replace it.
+                if filecmp.cmp(source_file, replica_file, shallow=False): # TODO
+                    shutil.copyfile(source_file, replica_file)
+                
+                    
+            for dir in dirs: # TODO
+                # If dir is not in replica, create it
+                if not os.path.exists(os.path.join(root, dir)): # TODO
+                    pass
+        
 
+            
 
-
+        
 
 
 
