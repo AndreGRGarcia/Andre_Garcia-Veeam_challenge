@@ -28,13 +28,15 @@ class Syncher:
             exit(1)
         self.sync_interval = int(self.sync_interval)
 
+        self.logger = Logger(self.logs_path)
+
         # Start the synching.
         self.start_sync()
 
     def start_sync(self) -> None:
         """ This method will start the synching process. """
 
-        updater = Updater(self.source_path, self.replica_path, self.logs_path, self.sync_interval)
+        updater = Updater(self.source_path, self.replica_path, self.logs_path, self.sync_interval, self.logger)
         updater.start()
 
         sleep(1)
@@ -57,13 +59,14 @@ class Syncher:
 
 class Updater(Thread):
 
-    def __init__(self, source_path, replica_path, logs_path, sync_interval):
+    def __init__(self, source_path, replica_path, logs_path, sync_interval, logger):
         Thread.__init__(self)
 
         self.source_path = source_path
         self.replica_path = replica_path
         self.logs_path = logs_path
         self.sync_interval = sync_interval
+        self.logger = logger
 
         self.daemon = True
 
@@ -73,35 +76,103 @@ class Updater(Thread):
     def sync_and_sleep(self) -> None:
         while True:
             self.sync_files()
+            self.logger.log_sync_complete()
             sleep(self.sync_interval)
 
     def sync_files(self) -> None: # TODO
-        
+
+        files_visited = set()
+        dirs_visited = set()
+        dirs_copied = set()
+
         for root, dirs, files in os.walk(self.source_path):
+            # Check if this root needs to be checked (this is useful if the directories have a lot of files, there could be a condition to use this snippet or not)
+            found = False
+            tree = root.split(os.sep)
+            for i in range(1, len(tree)-1):
+                test = os.path.join(*tree[:-i])
+                if test in dirs_copied:
+                    found = True
+                    break
+            if found: continue
+
+            dirs_visited.add(root)
+
             for file in files:
                 source_file = os.path.join(root, file)
                 replica_file = os.path.join(root.replace(self.source_path, self.replica_path), file)
-                
+                files_visited.add(replica_file)
 
                 # If source_file is not in replica/file is different from replica's, copy-paste it.
-                if not os.path.exists(replica_file) or not filecmp.cmp(source_file, replica_file, shallow=False): # TODO
+                if not os.path.exists(replica_file):
                     shutil.copyfile(source_file, replica_file)
+                    self.logger.log_file_creation(replica_file)
+                    continue
 
-                
                 # If file is different from replica's, replace it.
-                if filecmp.cmp(source_file, replica_file, shallow=False): # TODO
+                if not filecmp.cmp(source_file, replica_file, shallow=False):
                     shutil.copyfile(source_file, replica_file)
+                    self.logger.log_file_update(replica_file)
                 
                     
             for dir in dirs: # TODO
                 # If dir is not in replica, create it
-                if not os.path.exists(os.path.join(root, dir)): # TODO
-                    pass
-        
+                source_dir = os.path.join(root, dir)
+                replica_dir = os.path.join(root.replace(self.source_path, self.replica_path), dir)
+
+                if not os.path.exists(replica_dir):
+                    shutil.copytree(source_dir, replica_dir)
+                    dirs_copied.add(replica_dir)
+                    self.logger.log_dir_tree_creation(replica_dir)
+
+        '''
+        for root, dirs, files in os.walk(self.replica_path):
+            # Check if this root needs to be checked (this is useful if the directories have a lot of files, there could be a condition to use this snippet or not)
+            found = False
+            tree = root.split(os.sep)
+            for i in range(len(tree)):
+                if tree[:-i] in dirs_copied:
+                    found = True
+                    break
+            if found: continue
+
+            for file in files:
+                replica_file = os.path.join(root, file)
+                if replica_file not in files_visited:
+                    os.remove(file)
+                    self.logger.log_file_deletion(file)
+
+            for dir in dirs:
+                replica_dir = os.path.join(root, dir)
+
+                if replica_dir not in dirs_visited or replica_dir not in 
+        '''
 
             
 
-        
+class Logger:
+
+    def __init__(self, logs_path):
+        self.logs_path = logs_path
+
+    def log_file_creation(self, new_file_path: str) -> None: # TODO  
+        print("Created file: ", new_file_path)
+
+    def log_file_deletion(self, deleted_file_path: str) -> None: # TODO 
+        print("Deleted file: ", deleted_file_path)
+
+    def log_file_update(self, updated_file_path: str) -> None: # TODO 
+        print("Updated file: ", updated_file_path)
+
+    def log_dir_tree_creation(self, new_dir_path: str) -> None: # TODO 
+        print("Copied tree directory: ", new_dir_path)
+
+    def log_dir_deletion(self, deleted_dir_path: str) -> None: # TODO 
+        print("Deleted directory: ", deleted_dir_path)
+
+    def log_sync_complete(self):
+        print("SYNC COMPLETE")
+
 
 
 
