@@ -213,12 +213,6 @@ class Logger:
         print("SYNC COMPLETE")
 
 
-
-
-def maina():
-    ct = datetime.now()
-    print(type(ct))
-
 def main():
 
     args = {}
