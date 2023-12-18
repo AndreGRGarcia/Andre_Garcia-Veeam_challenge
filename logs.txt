@@ -1,0 +1,2 @@
+2023-12-18 18:08:36.137500: Created file ".\replica\coisas.txt"
+2023-12-18 18:08:36.138501: Copied directory ".\replica\cenas"

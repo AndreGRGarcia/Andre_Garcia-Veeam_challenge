@@ -7,6 +7,7 @@ import os
 import filecmp
 import shutil
 from pathlib import Path
+from datetime import datetime;
 
 
 class Syncher:
@@ -92,7 +93,7 @@ class Updater(Thread):
             replica_root_equivalent = root.replace(self.source_path, self.replica_path)
             tree = replica_root_equivalent.split(os.sep)
             found = False
-            for i in range(0, len(tree)-1):
+            for i in range(len(tree)-1):
                 i = None if i == 0 else -i # If i == 0, it turns to None and tree[:None] will be the entire list. After, the list is iteratively trimmed.
 
                 test = os.path.join(*tree[:i])
@@ -115,7 +116,7 @@ class Updater(Thread):
             # (this is useful if the directories have a lot of files, there could be a condition to only run this snippet if wanted)
             found = False
             tree = root.split(os.sep)
-            for i in range(0, len(tree)-1):
+            for i in range(len(tree)-1):
                 i = None if i == 0 else -i # If i == 0, it turns to None and tree[:None] will be the entire list. After, the list is iteratively trimmed.
 
                 test = os.path.join(*tree[:i])
@@ -139,13 +140,13 @@ class Updater(Thread):
             # If source_file is not in replica/file is different from replica's, copy-paste it.
             if not os.path.exists(replica_file):
                 shutil.copyfile(source_file, replica_file)
-                self.logger.log_file_creation(replica_file)
+                self.logger.log_file_creation(replica_file, datetime.now())
                 continue
 
             # If file is different from replica's, replace it.
             if not filecmp.cmp(source_file, replica_file, shallow=False):
                 shutil.copyfile(source_file, replica_file)
-                self.logger.log_file_update(replica_file)
+                self.logger.log_file_update(replica_file, datetime.now())
 
     def add_dirs(self, dirs: list, root: str, dirs_copied: set, dirs_visited: set):
         for dir in dirs:
@@ -157,7 +158,7 @@ class Updater(Thread):
             if not os.path.exists(replica_dir):
                 shutil.copytree(source_dir, replica_dir)
                 dirs_copied.add(replica_dir)
-                self.logger.log_dir_tree_creation(replica_dir)
+                self.logger.log_dir_tree_creation(replica_dir, datetime.now())
 
     def remove_files(self, files: list, root: str, files_visited: list) -> None:
         for file in files:
@@ -166,7 +167,7 @@ class Updater(Thread):
             # If the file has not been visited in source, remove it.
             if replica_file not in files_visited:
                 os.remove(replica_file)
-                self.logger.log_file_deletion(replica_file)
+                self.logger.log_file_deletion(replica_file, datetime.now())
 
     def remove_dirs(self, dirs: list, root: str, dirs_visited: set) -> None:
         for dir in dirs:
@@ -175,7 +176,7 @@ class Updater(Thread):
             # If the directory has not been visited in source, remove it.
             if replica_dir not in dirs_visited:
                 shutil.rmtree(replica_dir)
-                self.logger.log_dir_deletion(replica_dir)
+                self.logger.log_dir_deletion(replica_dir, datetime.now())
             
 
 class Logger:
@@ -183,19 +184,29 @@ class Logger:
     def __init__(self, logs_path):
         self.logs_path = logs_path
 
-    def log_file_creation(self, new_file_path: str) -> None: # TODO  
+    def log_file_creation(self, new_file_path: str, timestamp: datetime) -> None: # TODO
+        with open(self.logs_path, 'a') as file:
+            file.write(str(timestamp) + f": Created file \"{new_file_path}\"\n")
         print("Created file: ", new_file_path)
 
-    def log_file_deletion(self, deleted_file_path: str) -> None: # TODO 
+    def log_file_deletion(self, deleted_file_path: str, timestamp: datetime) -> None: # TODO
+        with open(self.logs_path, 'a') as file:
+            file.write(str(timestamp) + f": Deleted file \"{deleted_file_path}\"\n")
         print("Deleted file: ", deleted_file_path)
 
-    def log_file_update(self, updated_file_path: str) -> None: # TODO 
+    def log_file_update(self, updated_file_path: str, timestamp: datetime) -> None: # TODO
+        with open(self.logs_path, 'a') as file:
+            file.write(str(timestamp) + f": Updated file \"{updated_file_path}\"\n")
         print("Updated file: ", updated_file_path)
 
-    def log_dir_tree_creation(self, new_dir_path: str) -> None: # TODO 
+    def log_dir_tree_creation(self, new_dir_path: str, timestamp: datetime) -> None: # TODO
+        with open(self.logs_path, 'a') as file:
+            file.write(str(timestamp) + f": Copied directory \"{new_dir_path}\"\n")
         print("Copied tree directory: ", new_dir_path)
 
-    def log_dir_deletion(self, deleted_dir_path: str) -> None: # TODO 
+    def log_dir_deletion(self, deleted_dir_path: str, timestamp: datetime) -> None: # TODO
+        with open(self.logs_path, 'a') as file:
+            file.write(str(timestamp) + f": Deleted directory \"{deleted_dir_path}\"\n")
         print("Deleted directory: ", deleted_dir_path)
 
     def log_sync_complete(self) -> None:
@@ -205,8 +216,8 @@ class Logger:
 
 
 def maina():
-    ai = ["a", "b", "c"]
-    print(ai[None:0])
+    ct = datetime.now()
+    print(type(ct))
 
 def main():
 
